@@ -1,4 +1,4 @@
-# Diva Reminders
+# Diva Reminders 🌸
 
 A simple bot that tracks posting consistency in your Telegram channel.
 
