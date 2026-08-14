@@ -15,5 +15,3 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
-
-Set the allowed number of days without a post through `STREAK_DAYS` in `.env`.
