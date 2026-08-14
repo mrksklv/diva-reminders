@@ -134,10 +134,16 @@ def format_elapsed(last_post_at: datetime, now: datetime) -> str:
     seconds = max(0, int((now - last_post_at).total_seconds()))
     days, remainder = divmod(seconds, 86_400)
     hours = remainder // 3_600
-    return (
-        f"{russian_number(days, 'день', 'дня', 'дней')} и "
-        f"{russian_number(hours, 'час', 'часа', 'часов')} назад"
-    )
+
+    parts = []
+    if days:
+        parts.append(russian_number(days, "день", "дня", "дней"))
+    if hours:
+        parts.append(russian_number(hours, "час", "часа", "часов"))
+
+    if not parts:
+        return "меньше часа назад"
+    return " и ".join(parts) + " назад"
 
 
 class StateStore:
