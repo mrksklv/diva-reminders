@@ -238,7 +238,7 @@ async def run_bot() -> None:
 
     async def notify_subscribers(text: str) -> None:
         """Send a message with a footer attached to all subscribers."""
-        footer = f"{settings.channel_emoji} {settings.channel_username}".strip()
+        footer = f"<b>{settings.channel_emoji} {settings.channel_username}</b>".strip()
         message = f"{text}\n\n{footer}"
         for subscriber_id in settings.subscriber_ids:
             try:
