@@ -26,10 +26,6 @@ try {
   throw new Error('Invalid BOT_CONFIG timezone or initialLastPostAt');
 }
 config.initialLastPostAt ??= null;
-config.initialSent = { close: false, final: false, lost: false, ...config.initialSent };
-if (Object.values(config.initialSent).some(value => typeof value !== 'boolean')) {
-  throw new Error('BOT_CONFIG initialSent values must be booleans');
-}
 
 
 if (process.env.GITHUB_ACTIONS === 'true') {

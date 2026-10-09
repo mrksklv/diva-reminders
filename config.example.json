@@ -5,6 +5,5 @@
   "subscriberIds": [1234567890],
   "timezone": "Europe/Moscow",
   "streakDays": 7,
-  "initialLastPostAt": null,
-  "initialSent": { "close": false, "final": false, "lost": false }
+  "initialLastPostAt": null
 }

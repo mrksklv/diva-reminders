@@ -5,13 +5,10 @@ import { dueReminder, russianNumber } from './logic.js';
 export const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 export async function state() {
-  await db.run(`INSERT INTO channel_state (channel_id, last_post_at, close_sent, final_sent, lost_sent)
-    VALUES (:channel, :initial, :close, :final, :lost) ON CONFLICT(channel_id) DO NOTHING`, {
+  await db.run(`INSERT INTO channel_state (channel_id, last_post_at)
+    VALUES (:channel, :initial) ON CONFLICT(channel_id) DO NOTHING`, {
     ':channel': config.channelId,
     ':initial': config.initialLastPostAt == null ? null : Math.floor(Date.parse(config.initialLastPostAt) / 1000),
-    ':close': Number(config.initialSent.close),
-    ':final': Number(config.initialSent.final),
-    ':lost': Number(config.initialSent.lost),
   });
   return db.get('SELECT * FROM channel_state WHERE channel_id = :channel', { ':channel': config.channelId });
 }
