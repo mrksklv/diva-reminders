@@ -67,7 +67,7 @@ class Settings:
 
         return cls(
             bot_token=token,
-            channel_id=int(os.getenv("CHANNEL_ID", "-1002620629693")),
+            channel_id=int(os.environ["CHANNEL_ID"]),
             channel_username=username,
             subscriber_ids=subscriber_ids,
             timezone=timezone,

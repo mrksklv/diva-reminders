@@ -1,0 +1,52 @@
+name: Check reminders
+on:
+  schedule:
+    # 22:00 and 00:00 Europe/Moscow (UTC+3)
+    - cron: '0 19,21 * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Check reminders or deploy the bot
+        type: choice
+        default: check
+        options:
+          - check
+          - deploy
+permissions:
+  contents: read
+concurrency:
+  group: diva-reminders-check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BOT_CONFIG: ${{ secrets.BOT_CONFIG }}
+      TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run configure
+      - name: Fetch deployment revision
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy'
+        run: npx tgcloud fetch
+      - name: Deploy schema
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy'
+        run: npx tgcloud push tgcloud/schema.js
+      - name: Apply additive schema changes
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy'
+        run: npx tgcloud migrate --safe
+      - name: Deploy bot
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy'
+        run: npm run deploy
+      - name: Sync webhook
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy'
+        run: npx tgcloud webhook sync > /dev/null
+      - name: Check reminders
+        if: github.event_name != 'workflow_dispatch' || inputs.action == 'check'
+        run: npm run check-reminders
