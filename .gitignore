@@ -2,12 +2,8 @@
 .env.*
 !.env.example
 
-.tgcloud/
-node_modules/
-
 .DS_Store
 .venv/
 __pycache__/
 
 .state.json
-tgcloud/lib/config.js
