@@ -3,7 +3,7 @@
 Renders every emoji with Apple Color Emoji (macOS only), classifies each opaque
 pixel into one of the basic colors, and keeps an emoji for a color when at least
 THRESHOLD of its pixels are that color. The emoji list and categories come from
-Unicode's emoji-test.txt; japanese badges, zodiac, religious signs, media buttons and clock faces are skipped.
+Unicode's emoji-test.txt; japanese badges, zodiac, religious signs, media buttons, arrows and clock faces are skipped.
 
     pip install pillow
     python scripts/build_emoji_palette.py
@@ -23,8 +23,8 @@ COLORS = ("red", "orange", "yellow", "green", "blue", "purple", "pink", "brown",
 
 EMOJI_TEST_URL = "https://unicode.org/Public/emoji/16.0/emoji-test.txt"
 SKIP_GROUPS = {"Flags", "Component"}
-# japanese/letter badges (🈶 🉐 🆓 🅰️), keycaps (🔟), zodiac (♊), religion (☸️), media buttons (🔂 ⏩)
-SKIP_SUBGROUPS = {"alphanum", "keycap", "zodiac", "religion", "av-symbol"}
+# japanese/letter badges (🈶 🉐 🆓 🅰️), keycaps (🔟), zodiac (♊), religion (☸️), media buttons (🔂 ⏩), arrows (➡️)
+SKIP_SUBGROUPS = {"alphanum", "keycap", "zodiac", "religion", "av-symbol", "arrow"}
 CLOCK_FACES = {chr(cp) for cp in range(0x1F550, 0x1F568)}  # 🕐 ... 🕧
 SKIP_EMOJI = CLOCK_FACES | {"🚼", "✳️", "❇️", "💹"}
 SKIN_TONES = {chr(cp) for cp in range(0x1F3FB, 0x1F400)}
