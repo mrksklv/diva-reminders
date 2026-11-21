@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -10,9 +11,15 @@ from zoneinfo import ZoneInfo
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramAPIError
-from aiogram.filters import CommandStart
-from aiogram.types import LinkPreviewOptions, Message
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.filters import Command, CommandStart
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    LinkPreviewOptions,
+    Message,
+)
 from dotenv import load_dotenv
 
 
@@ -202,6 +209,62 @@ class StateStore:
             self.data.setdefault("sent", {})[reminder] = True
             self._save()
 
+# basic colors for the /emoji command: key -> (button label, 10 closest emoji)
+EMOJI_COLORS = {
+    "red": ("🔴 красный", "❤️ 🔴 🟥 🍎 🍓 🍒 🌹 🍅 🌶️ 🥊"),
+    "orange": ("🟠 оранжевый", "🧡 🟠 🟧 🍊 🥕 🎃 🦊 🏀 🥭 📙"),
+    "yellow": ("🟡 жёлтый", "💛 🟡 🟨 🍋 🌻 🌼 ⭐ 🍌 🐥 🌕"),
+    "green": ("🟢 зелёный", "💚 🟢 🟩 🍏 🥦 🥒 🍀 🌿 🐸 🌲"),
+    "blue": ("🔵 синий", "💙 🔵 🟦 🫐 🌊 🐳 🧊 💎 🦋 📘"),
+    "purple": ("🟣 фиолетовый", "💜 🟣 🟪 🍇 🍆 🔮 👾 😈 🪻 ☂️"),
+    "pink": ("🩷 розовый", "🩷 💗 💖 💕 🌸 🌷 🎀 🦩 🐷 🌺"),
+    "brown": ("🟤 коричневый", "🤎 🟤 🟫 🍫 🐻 🪵 🥔 🍪 🌰 🧸"),
+    "black": ("⚫ чёрный", "🖤 ⚫ ⬛ 🐈‍⬛ 🎱 🕷️ 🦇 🐦‍⬛ 🎩 ♠️"),
+    "white": ("⚪ белый", "🤍 ⚪ ⬜ ☁️ ❄️ 🐑 🦢 🥚 🕊️ ⛄"),
+}
+EMOJI_CALLBACK_PREFIX = "emoji:"
+EMOJI_COUNT = 10
+
+# emoji measured as generally each color (see scripts/build_emoji_palette.py)
+EMOJI_PALETTE_FILE = Path(__file__).resolve().parent / "emoji_palette.json"
+
+
+def load_emoji_pools() -> dict[str, list[str]]:
+    """Return every emoji to shuffle from for each color: the palette file plus the closest set."""
+    try:
+        palette = json.loads(EMOJI_PALETTE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        logging.exception("Couldn't load %s, shuffle will only use the closest emoji", EMOJI_PALETTE_FILE)
+        palette = {}
+    pools = {}
+    for key, (_, closest) in EMOJI_COLORS.items():
+        measured = [char for char, _ in palette.get(key, [])]
+        pools[key] = list(dict.fromkeys(closest.split() + measured))  # dedupe, keep order
+    return pools
+
+
+EMOJI_POOLS = load_emoji_pools()
+
+
+def color_keyboard() -> InlineKeyboardMarkup:
+    """Build an inline keyboard with one button per color, two per row."""
+    buttons = [
+        InlineKeyboardButton(text=label, callback_data=f"{EMOJI_CALLBACK_PREFIX}pick:{key}")
+        for key, (label, _) in EMOJI_COLORS.items()
+    ]
+    return InlineKeyboardMarkup(
+        inline_keyboard=[buttons[i:i + 2] for i in range(0, len(buttons), 2)]
+    )
+
+
+def emoji_result_keyboard(color: str) -> InlineKeyboardMarkup:
+    """Buttons under a set of emoji: shuffle this color, or go back to the colors."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🔀 перемешать", callback_data=f"{EMOJI_CALLBACK_PREFIX}shuffle:{color}"),
+        InlineKeyboardButton(text="🎨 другой цвет", callback_data=f"{EMOJI_CALLBACK_PREFIX}menu"),
+    ]])
+
+
 # text presets:
 TEXT_PRESETS = {
     "new": "✨ в канале вышел новый <a href=\"{post_url}\">пост</a>!",
@@ -212,6 +275,7 @@ TEXT_PRESETS = {
     "hello": "👋 привет! я слежу за постами в {channel_username}",
     "last": "последний пост вышел {elapsed}",
     "no_posts": "я ещё не видел постов после запуска",
+    "choose_color": "🎨 выбери цвет:",
 }
 
 
@@ -276,6 +340,34 @@ async def run_bot() -> None:
             + "\n"
             + status
         )
+
+    @router.message(Command("emoji"))  # emoji command: ask for a color
+    async def emoji(message: Message) -> None:
+        await message.answer(TEXT_PRESETS["choose_color"], reply_markup=color_keyboard())
+
+    @router.callback_query(lambda query: (query.data or "").startswith(EMOJI_CALLBACK_PREFIX))
+    async def emoji_button(query: CallbackQuery) -> None:
+        # edit the same message: colors -> closest emoji -> shuffled emoji / back to colors
+        action, _, color = query.data.removeprefix(EMOJI_CALLBACK_PREFIX).partition(":")
+        await query.answer()
+        if not isinstance(query.message, Message):
+            return  # message is too old to edit
+
+        if action == "menu":
+            text, markup = TEXT_PRESETS["choose_color"], color_keyboard()
+        elif color in EMOJI_COLORS and action == "pick":
+            text, markup = EMOJI_COLORS[color][1], emoji_result_keyboard(color)
+        elif color in EMOJI_COLORS and action == "shuffle":
+            pool = EMOJI_POOLS[color]
+            text = " ".join(random.sample(pool, min(EMOJI_COUNT, len(pool))))
+            markup = emoji_result_keyboard(color)
+        else:
+            return
+
+        try:
+            await query.message.edit_text(text, reply_markup=markup)
+        except TelegramBadRequest:
+            pass  # same text as before ("message is not modified")
 
     @router.channel_post()
     async def channel_post(message: Message) -> None:
