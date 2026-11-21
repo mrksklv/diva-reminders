@@ -209,18 +209,18 @@ class StateStore:
             self.data.setdefault("sent", {})[reminder] = True
             self._save()
 
-# basic colors for the /emoji command: key -> (button label, 10 closest emoji)
+# basic colors for the /emoji command: key -> (button emoji, 10 closest emoji)
 EMOJI_COLORS = {
-    "red": ("🔴 красный", "❤️ 🔴 🟥 🍎 🍓 🍒 🌹 🍅 🌶️ 🥊"),
-    "orange": ("🟠 оранжевый", "🧡 🟠 🟧 🍊 🥕 🎃 🦊 🏀 🥭 📙"),
-    "yellow": ("🟡 жёлтый", "💛 🟡 🟨 🍋 🌻 🌼 ⭐ 🍌 🐥 🌕"),
-    "green": ("🟢 зелёный", "💚 🟢 🟩 🍏 🥦 🥒 🍀 🌿 🐸 🌲"),
-    "blue": ("🔵 синий", "💙 🔵 🟦 🫐 🌊 🐳 🧊 💎 🦋 📘"),
-    "purple": ("🟣 фиолетовый", "💜 🟣 🟪 🍇 🍆 🔮 👾 😈 🪻 ☂️"),
-    "pink": ("🩷 розовый", "🩷 💗 💖 💕 🌸 🌷 🎀 🦩 🐷 🌺"),
-    "brown": ("🟤 коричневый", "🤎 🟤 🟫 🍫 🐻 🪵 🥔 🍪 🌰 🧸"),
-    "black": ("⚫ чёрный", "🖤 ⚫ ⬛ 🐈‍⬛ 🎱 🕷️ 🦇 🐦‍⬛ 🎩 ♠️"),
-    "white": ("⚪ белый", "🤍 ⚪ ⬜ ☁️ ❄️ 🐑 🦢 🥚 🕊️ ⛄"),
+    "red": ("🔴", "❤️ 🔴 🟥 🍎 🍓 🍒 🌹 🍅 🌶️ 🥊"),
+    "orange": ("🟠", "🧡 🟠 🟧 🍊 🥕 🎃 🦊 🏀 🥭 📙"),
+    "yellow": ("🟡", "💛 🟡 🟨 🍋 🌻 🌼 ⭐ 🍌 🐥 🌕"),
+    "green": ("🟢", "💚 🟢 🟩 🍏 🥦 🥒 🍀 🌿 🐸 🌲"),
+    "blue": ("🔵", "💙 🔵 🟦 🫐 🌊 🐳 🧊 💎 🦋 📘"),
+    "purple": ("🟣", "💜 🟣 🟪 🍇 🍆 🔮 👾 😈 🪻 ☂️"),
+    "pink": ("🩷", "🩷 💗 💖 💕 🌸 🌷 🎀 🦩 🐷 🌺"),
+    "brown": ("🟤", "🤎 🟤 🟫 🍫 🐻 🪵 🥔 🍪 🌰 🧸"),
+    "black": ("⚫", "🖤 ⚫ ⬛ 🐈‍⬛ 🎱 🕷️ 🦇 🐦‍⬛ 🎩 ♠️"),
+    "white": ("⚪", "🤍 ⚪ ⬜ ☁️ ❄️ 🐑 🦢 🥚 🕊️ ⛄"),
 }
 EMOJI_CALLBACK_PREFIX = "emoji:"
 EMOJI_COUNT = 10
@@ -247,21 +247,21 @@ EMOJI_POOLS = load_emoji_pools()
 
 
 def color_keyboard() -> InlineKeyboardMarkup:
-    """Build an inline keyboard with one button per color, two per row."""
+    """Build an inline keyboard with one button per color, five per row."""
     buttons = [
         InlineKeyboardButton(text=label, callback_data=f"{EMOJI_CALLBACK_PREFIX}pick:{key}")
         for key, (label, _) in EMOJI_COLORS.items()
     ]
     return InlineKeyboardMarkup(
-        inline_keyboard=[buttons[i:i + 2] for i in range(0, len(buttons), 2)]
+        inline_keyboard=[buttons[i:i + 5] for i in range(0, len(buttons), 5)]
     )
 
 
 def emoji_result_keyboard(color: str) -> InlineKeyboardMarkup:
     """Buttons under a set of emoji: shuffle this color, or go back to the colors."""
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🔀 перемешать", callback_data=f"{EMOJI_CALLBACK_PREFIX}shuffle:{color}"),
-        InlineKeyboardButton(text="🎨 другой цвет", callback_data=f"{EMOJI_CALLBACK_PREFIX}menu"),
+        InlineKeyboardButton(text="🔀", callback_data=f"{EMOJI_CALLBACK_PREFIX}shuffle:{color}"),
+        InlineKeyboardButton(text="🎨", callback_data=f"{EMOJI_CALLBACK_PREFIX}menu"),
     ]])
 
 

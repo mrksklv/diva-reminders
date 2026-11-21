@@ -2,17 +2,18 @@
 
 Renders every emoji with Apple Color Emoji (macOS only), classifies each opaque
 pixel into one of the basic colors, and keeps an emoji for a color when at least
-THRESHOLD of its pixels are that color.
+THRESHOLD of its pixels are that color. The emoji list and categories come from
+Unicode's emoji-test.txt; japanese badges, zodiac, religious signs, media buttons and clock faces are skipped.
 
-    pip install pillow emoji
+    pip install pillow
     python scripts/build_emoji_palette.py
 """
 
 import colorsys
 import json
+import urllib.request
 from pathlib import Path
 
-import emoji
 from PIL import Image, ImageDraw, ImageFont
 
 FONT_PATH = "/System/Library/Fonts/Apple Color Emoji.ttc"
@@ -20,8 +21,13 @@ OUTPUT = Path(__file__).resolve().parent.parent / "emoji_palette.json"
 THRESHOLD = 0.5  # share of an emoji's visible pixels that must be the color
 COLORS = ("red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "black", "white")
 
+EMOJI_TEST_URL = "https://unicode.org/Public/emoji/16.0/emoji-test.txt"
+SKIP_GROUPS = {"Flags", "Component"}
+# japanese/letter badges (🈶 🉐 🆓 🅰️), keycaps (🔟), zodiac (♊), religion (☸️), media buttons (🔂 ⏩)
+SKIP_SUBGROUPS = {"alphanum", "keycap", "zodiac", "religion", "av-symbol"}
+CLOCK_FACES = {chr(cp) for cp in range(0x1F550, 0x1F568)}  # 🕐 ... 🕧
+SKIP_EMOJI = CLOCK_FACES | {"🚼", "✳️", "❇️", "💹"}
 SKIN_TONES = {chr(cp) for cp in range(0x1F3FB, 0x1F400)}
-REGIONAL_INDICATORS = {chr(cp) for cp in range(0x1F1E6, 0x1F200)}
 # people in ZWJ sequences (professions, families, gendered variants) are mostly skin color
 PEOPLE = {"\U0001F466", "\U0001F467", "\U0001F468", "\U0001F469", "\U0001F9D1", "\U0001F9D2", "\u2640", "\u2642"}
 
@@ -54,17 +60,27 @@ def classify(r: int, g: int, b: int) -> str | None:
 
 
 def candidates() -> list[str]:
-    """All fully qualified emoji, minus skin-tone variants and flags."""
+    """Fully qualified emoji from emoji-test.txt, minus skipped categories and skin tones."""
+    with urllib.request.urlopen(EMOJI_TEST_URL) as response:
+        lines = response.read().decode("utf-8").splitlines()
+
     result = []
-    for char, data in emoji.EMOJI_DATA.items():
-        if data.get("status") != emoji.STATUS["fully_qualified"]:
-            continue
-        chars = set(char)
-        if SKIN_TONES & chars or REGIONAL_INDICATORS & chars or "\U000E0067" in char:
-            continue
-        if "\u200d" in char and PEOPLE & chars:
-            continue
-        result.append(char)
+    group = subgroup = ""
+    for line in lines:
+        if line.startswith("# group:"):
+            group = line.split(":", 1)[1].strip()
+        elif line.startswith("# subgroup:"):
+            subgroup = line.split(":", 1)[1].strip()
+        elif "; fully-qualified" in line:
+            char = line.split("#", 1)[1].split()[0]
+            if char in SKIP_EMOJI:
+                continue
+            if group in SKIP_GROUPS or subgroup in SKIP_SUBGROUPS:
+                continue
+            chars = set(char)
+            if SKIN_TONES & chars or ("\u200d" in char and PEOPLE & chars):
+                continue
+            result.append(char)
     return result
 
 

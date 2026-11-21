@@ -27,4 +27,4 @@ State is stored in `STATE_FILE` (default: `.state.json`); preserve it across res
 and 🔀 shuffles 10 random emoji that are generally that color. The shuffle pool
 lives in `emoji_palette.json`: an emoji counts for a color when at least 50% of
 its visible pixels (as rendered by Apple Color Emoji) are that color. To rebuild
-it on macOS, run `pip install pillow emoji` and `python scripts/build_emoji_palette.py`.
+it on macOS, run `pip install pillow` and `python scripts/build_emoji_palette.py`.
